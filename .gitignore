@@ -2,3 +2,4 @@ bin/
 obj/
 WeatherStation/.vs/
 *.user
+*.suo

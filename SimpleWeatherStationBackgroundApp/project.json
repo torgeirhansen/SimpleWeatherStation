@@ -1,7 +1,7 @@
 ﻿{
   "dependencies": {
-    "Microsoft.NETCore.Runtime.CoreCLR-x86": "1.0.0-beta-23121",
-    "Microsoft.NETCore.UniversalWindowsPlatform": "5.0.0"
+    "Microsoft.NETCore.UniversalWindowsPlatform": "5.0.0",
+    "Newtonsoft.Json": "7.0.1"
   },
   "frameworks": {
     "uap10.0": {}

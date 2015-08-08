@@ -4,8 +4,7 @@ using Windows.Devices.Enumeration;
 using Windows.Devices.Gpio;
 using Windows.Devices.I2c;
 
-namespace build2015_weather_station_task
-{
+namespace SimpleWeatherStationBackgroundApp {
     namespace Sparkfun
     {
         public sealed class WeatherShield
@@ -97,9 +96,9 @@ namespace build2015_weather_station_task
                  * Use the Windows.Devices.Enumeration.DeviceInformation class to create a collection using the advanced query syntax string
                  * Take the device id of the first device in the collection
                  */
-                string advanced_query_syntax = I2cDevice.GetDeviceSelector("I2C1");
-                DeviceInformationCollection device_information_collection = await DeviceInformation.FindAllAsync(advanced_query_syntax);
-                string deviceId = device_information_collection[0].Id;
+                string advancedQuerySyntax = I2cDevice.GetDeviceSelector("I2C1");
+                DeviceInformationCollection deviceInformationCollection = await DeviceInformation.FindAllAsync(advancedQuerySyntax);
+                string deviceId = deviceInformationCollection[0].Id;
 
                 /*
                  * Establish an I2C connection to the HTDU21D
@@ -110,11 +109,11 @@ namespace build2015_weather_station_task
                  *
                  * Instantiate the the HTDU21D I2C device using the device id and the I2cConnectionSettings
                  */
-                I2cConnectionSettings htdu21d_connection = new I2cConnectionSettings(HTDU21D_I2C_ADDRESS);
-                htdu21d_connection.BusSpeed = I2cBusSpeed.FastMode;
-                htdu21d_connection.SharingMode = I2cSharingMode.Shared;
+                I2cConnectionSettings htdu21DConnection = new I2cConnectionSettings(HTDU21D_I2C_ADDRESS);
+                htdu21DConnection.BusSpeed = I2cBusSpeed.FastMode;
+                htdu21DConnection.SharingMode = I2cSharingMode.Shared;
 
-                htdu21d = await I2cDevice.FromIdAsync(deviceId, htdu21d_connection);
+                htdu21d = await I2cDevice.FromIdAsync(deviceId, htdu21DConnection);
 
                 /*
                  * Establish an I2C connection to the MPL3115A2
@@ -125,11 +124,11 @@ namespace build2015_weather_station_task
                  *
                  * Instantiate the the MPL3115A2 I2C device using the device id and the I2cConnectionSettings
                  */
-                I2cConnectionSettings mpl3115a2_connection = new I2cConnectionSettings(MPL3115A2_I2C_ADDRESS);
-                mpl3115a2_connection.BusSpeed = I2cBusSpeed.FastMode;
-                mpl3115a2_connection.SharingMode = I2cSharingMode.Shared;
+                I2cConnectionSettings mpl3115A2Connection = new I2cConnectionSettings(MPL3115A2_I2C_ADDRESS);
+                mpl3115A2Connection.BusSpeed = I2cBusSpeed.FastMode;
+                mpl3115A2Connection.SharingMode = I2cSharingMode.Shared;
 
-                mpl3115a2 = await I2cDevice.FromIdAsync(deviceId, mpl3115a2_connection);
+                mpl3115a2 = await I2cDevice.FromIdAsync(deviceId, mpl3115A2Connection);
             }
 
             /// <summary>
@@ -142,12 +141,12 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    double pressure_Pa = Pressure;
+                    double pressurePa = Pressure;
 
                     // Calculate using US Standard Atmosphere 1976 (NASA)
-                    double altitude_m = (44330.77 * (1 - Math.Pow((pressure_Pa / 101326), 0.1902632)) /*+ OFF_H*/); // OFF_H (disabled) is the user offset
+                    double altitudeM = (44330.77 * (1 - Math.Pow((pressurePa / 101326), 0.1902632)) /*+ OFF_H*/); // OFF_H (disabled) is the user offset
 
-                    return Convert.ToSingle(altitude_m);
+                    return Convert.ToSingle(altitudeM);
                 }
             }
 
@@ -161,11 +160,20 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    ushort raw_humidity_data = RawHumidity;
-                    double humidity_RH = (((125.0 * raw_humidity_data) / 65536) - 6.0);
+                    ushort rawHumidityData = RawHumidity;
+                    double humidityRh = (((125.0 * rawHumidityData) / 65536) - 6.0);
 
-                    return Convert.ToSingle(humidity_RH);
+                    return Convert.ToSingle(humidityRh);
                 }
+            }
+
+            /// <summary>
+            /// Ambient Light data
+            /// </summary>
+            public float AmbientLight
+            {
+                // TODO TOHA: Not yet implemented, awaiting hardware to implement :)
+                get { return -1; }
             }
 
             /// <summary>
@@ -178,10 +186,10 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    uint raw_pressure_data = RawPressure;
-                    double pressure_Pa = ((raw_pressure_data >> 6) + (((raw_pressure_data >> 4) & 0x03) / 4.0));
+                    uint rawPressureData = RawPressure;
+                    double pressurePa = ((rawPressureData >> 6) + (((rawPressureData >> 4) & 0x03) / 4.0));
 
-                    return Convert.ToSingle(pressure_Pa);
+                    return Convert.ToSingle(pressurePa);
                 }
             }
 
@@ -195,10 +203,10 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    ushort raw_temperature_data = RawTemperature;
-                    double temperature_C = (((175.72 * raw_temperature_data) / 65536) - 46.85);
+                    ushort rawTemperatureData = RawTemperature;
+                    double temperatureC = (((175.72 * rawTemperatureData) / 65536) - 46.85);
 
-                    return Convert.ToSingle(temperature_C);
+                    return Convert.ToSingle(temperatureC);
                 }
             }
 
@@ -206,8 +214,7 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    ushort humidity = 0;
-                    byte[] i2c_humidity_data = new byte[3];
+                    byte[] i2CHumidityData = new byte[3];
 
                     /*
                      * Request humidity data from the HTDU21D
@@ -223,7 +230,7 @@ namespace build2015_weather_station_task
                      *
                      * NOTE: Holding the line allows for a `WriteRead` style transaction
                      */
-                    htdu21d.WriteRead(new byte[] { SAMPLE_HUMIDITY_HOLD }, i2c_humidity_data);
+                    htdu21d.WriteRead(new byte[] { SAMPLE_HUMIDITY_HOLD }, i2CHumidityData);
 
                     /*
                      * Reconstruct the result using the first two bytes returned from the device
@@ -234,8 +241,8 @@ namespace build2015_weather_station_task
                      * -- off = temperature data
                      * -- on = humdity data
                      */
-                    humidity = (ushort)(i2c_humidity_data[0] << 8);
-                    humidity |= (ushort)(i2c_humidity_data[1] & 0xFC);
+                    ushort humidity = (ushort)(i2CHumidityData[0] << 8);
+                    humidity |= (ushort)(i2CHumidityData[1] & 0xFC);
 
                     /*
                      * Test the integrity of the data
@@ -245,11 +252,11 @@ namespace build2015_weather_station_task
                      *
                      * WARNING: HTDU21D firmware error - XOR CRC byte with 0x62 before attempting to validate
                      */
-                    bool humidity_data = (0x00 != (0x02 & i2c_humidity_data[1]));
-                    if (!humidity_data) { return 0; }
+                    bool humidityData = (0x00 != (0x02 & i2CHumidityData[1]));
+                    if (!humidityData) { return 0; }
 
-                    bool valid_data = ValidHtdu21dCyclicRedundancyCheck(humidity, (byte)(i2c_humidity_data[2] ^ 0x62));
-                    if (!valid_data) { return 0; }
+                    bool validData = ValidHtdu21dCyclicRedundancyCheck(humidity, (byte)(i2CHumidityData[2] ^ 0x62));
+                    if (!validData) { return 0; }
 
                     return humidity;
                 }
@@ -259,9 +266,8 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    uint pressure = 0;
-                    byte[] reg_data = new byte[1];
-                    byte[] raw_pressure_data = new byte[3];
+                    byte[] regData = new byte[1];
+                    byte[] rawPressureData = new byte[3];
 
                     // Toggle one shot
 
@@ -280,10 +286,10 @@ namespace build2015_weather_station_task
                      * --- on = initiate measurement
                      * - Write the resulting value back to Control Register 1
                      */
-                    mpl3115a2.WriteRead(new byte[] { CTRL_REG1 }, reg_data);
-                    reg_data[0] &= 0xFE;  // ensure SBYB (bit 0) is set to STANDBY
-                    reg_data[0] |= 0x02;  // ensure OST (bit 1) is set to initiate measurement
-                    mpl3115a2.Write(new byte[] { CTRL_REG1, reg_data[0] });
+                    mpl3115a2.WriteRead(new byte[] { CTRL_REG1 }, regData);
+                    regData[0] &= 0xFE;  // ensure SBYB (bit 0) is set to STANDBY
+                    regData[0] |= 0x02;  // ensure OST (bit 1) is set to initiate measurement
+                    mpl3115a2.Write(new byte[] { CTRL_REG1, regData[0] });
 
                     /*
                      * Wait 10ms to allow MPL3115A2 to process the pressure value
@@ -297,14 +303,14 @@ namespace build2015_weather_station_task
                      * - byte 1 - CSB of the pressure
                      * - byte 2 - LSB of the pressure
                      */
-                    mpl3115a2.WriteRead(new byte[] { OUT_P_MSB }, raw_pressure_data);
+                    mpl3115a2.WriteRead(new byte[] { OUT_P_MSB }, rawPressureData);
 
                     /*
                      * Reconstruct the result using all three bytes returned from the device
                      */
-                    pressure = (uint)(raw_pressure_data[0] << 16);
-                    pressure |= (uint)(raw_pressure_data[1] << 8);
-                    pressure |= raw_pressure_data[2];
+                    uint pressure = (uint)(rawPressureData[0] << 16);
+                    pressure |= (uint)(rawPressureData[1] << 8);
+                    pressure |= rawPressureData[2];
 
                     return pressure;
                 }
@@ -314,7 +320,6 @@ namespace build2015_weather_station_task
             {
                 get
                 {
-                    ushort temperature = 0;
                     byte[] i2c_temperature_data = new byte[3];
 
                     /*
@@ -342,7 +347,7 @@ namespace build2015_weather_station_task
                      * -- off = temperature data
                      * -- on = humdity data
                      */
-                    temperature = (ushort)(i2c_temperature_data[0] << 8);
+                    ushort temperature = (ushort)(i2c_temperature_data[0] << 8);
                     temperature |= (ushort)(i2c_temperature_data[1] & 0xFC);
 
                     /*
@@ -351,19 +356,19 @@ namespace build2015_weather_station_task
                      * Ensure the data returned is temperature data (hint: byte 1, bit 1)
                      * Test cyclic redundancy check (CRC) byte
                      */
-                    bool temperature_data = (0x00 == (0x02 & i2c_temperature_data[1]));
-                    if (!temperature_data) { return 0; }
+                    bool temperatureData = (0x00 == (0x02 & i2c_temperature_data[1]));
+                    if (!temperatureData) { return 0; }
 
-                    bool valid_data = ValidHtdu21dCyclicRedundancyCheck(temperature, i2c_temperature_data[2]);
-                    if (!valid_data) { return 0; }
+                    bool validData = ValidHtdu21dCyclicRedundancyCheck(temperature, i2c_temperature_data[2]);
+                    if (!validData) { return 0; }
 
                     return temperature;
                 }
             }
 
             private bool ValidHtdu21dCyclicRedundancyCheck(
-                ushort data_,
-                byte crc_
+                ushort data,
+                byte crc
             )
             {
                 /*
@@ -376,15 +381,15 @@ namespace build2015_weather_station_task
                 const int DATA_LENGTH = 16;
                 const ushort GENERATOR_POLYNOMIAL = 0x0131;
 
-                int crc_data = data_ << CRC_BIT_LENGTH;
+                int crcData = data << CRC_BIT_LENGTH;
 
                 for (int i = (DATA_LENGTH - 1); 0 <= i; --i)
                 {
-                    if (0 == (0x01 & (crc_data >> (CRC_BIT_LENGTH + i)))) { continue; }
-                    crc_data ^= (GENERATOR_POLYNOMIAL << i);
+                    if (0 == (0x01 & (crcData >> (CRC_BIT_LENGTH + i)))) { continue; }
+                    crcData ^= (GENERATOR_POLYNOMIAL << i);
                 }
 
-                return (crc_ == crc_data);
+                return (crc == crcData);
             }
         }
     }
