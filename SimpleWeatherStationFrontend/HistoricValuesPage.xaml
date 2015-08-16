@@ -12,9 +12,7 @@
         <local:HistoricValuesPage/>
     </Page.DataContext>-->
 
-    <Grid Background="Black" Tapped="Grid_Tapped">
-        <!--<TextBlock FontSize="50" Text="BLABLA UKEBLA" Foreground="WhiteSmoke"></TextBlock>-->
-        <!--<TextBlock FontSize="50" Text="{Binding Path=SomeText}" Foreground="WhiteSmoke"></TextBlock>-->
+    <Grid Background="Black" Tapped="Grid_PointerPressed" PointerPressed="Grid_PointerPressed">
         <windows:PlotView Background="Black" Model="{Binding Path=PlotModel}"/>
     </Grid>
 </Page>

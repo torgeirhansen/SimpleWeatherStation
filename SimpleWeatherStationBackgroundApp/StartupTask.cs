@@ -62,51 +62,64 @@ namespace SimpleWeatherStationBackgroundApp {
         /// Reads the json files if existing, and populates the WeatherData with that data.
         /// </summary>
         private async Task ReadPersistedWeatherDataAsync() {
-            try {
+            try
+            {
                 List<WeatherRecord> data = await GetFileDataOrEmptyListAsync("CurrentMonthRecords.Json");
-                lock (weatherData.CurrentMonthRecords)
+                if (data != null && data.Any())
                 {
-                    weatherData.CurrentMonthRecords.Clear();
-
-                    // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                    List<DateTime> foundDates = new List<DateTime>();
-                    foreach (WeatherRecord wr in data)
+                    lock (weatherData.CurrentMonthRecords)
                     {
-                        if (!foundDates.Contains(wr.TimeStamp))
+                        weatherData.CurrentMonthRecords.Clear();
+
+                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
+                        List<DateTime> foundDates = new List<DateTime>();
+                        foreach (WeatherRecord wr in data)
                         {
-                            foundDates.Add(wr.TimeStamp);
-                            weatherData.CurrentMonthRecords.Add(wr);
+                            if (!foundDates.Contains(wr.TimeStamp))
+                            {
+                                foundDates.Add(wr.TimeStamp);
+                                weatherData.CurrentMonthRecords.Add(wr);
+                            }
                         }
                     }
                 }
 
-                data = await GetFileDataOrEmptyListAsync("CurrentDayRecords.Json");
-                lock (weatherData.CurrentDayRecords)
+                data = await GetFileDataOrEmptyListAsync("Last24HourRecords.Json");
+                if (data != null && data.Any())
                 {
-                    weatherData.CurrentDayRecords.Clear();
-
-                    // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                    List<DateTime> foundDates = new List<DateTime>();
-                    foreach (WeatherRecord wr in data)
+                    lock (weatherData.Last24HourRecords)
                     {
-                        if (!foundDates.Contains(wr.TimeStamp))
+                        weatherData.Last24HourRecords.Clear();
+
+                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
+                        List<DateTime> foundDates = new List<DateTime>();
+                        foreach (WeatherRecord wr in data)
                         {
-                            foundDates.Add(wr.TimeStamp);
-                            weatherData.CurrentDayRecords.Add(wr);
+                            if (!foundDates.Contains(wr.TimeStamp))
+                            {
+                                foundDates.Add(wr.TimeStamp);
+                                weatherData.Last24HourRecords.Add(wr);
+                            }
                         }
                     }
                 }
 
                 data = await GetFileDataOrEmptyListAsync("CurrentHourRecords.Json");
-                lock (weatherData.CurrentHourRecords) {
-                    weatherData.CurrentHourRecords.Clear();
+                if (data != null && data.Any())
+                {
+                    lock (weatherData.CurrentHourRecords)
+                    {
+                        weatherData.CurrentHourRecords.Clear();
 
-                    // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                    List<DateTime> foundDates = new List<DateTime>();
-                    foreach(WeatherRecord wr in data) {
-                        if(!foundDates.Contains(wr.TimeStamp)) {
-                            foundDates.Add(wr.TimeStamp);
-                            weatherData.CurrentHourRecords.Add(wr);
+                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
+                        List<DateTime> foundDates = new List<DateTime>();
+                        foreach (WeatherRecord wr in data)
+                        {
+                            if (!foundDates.Contains(wr.TimeStamp))
+                            {
+                                foundDates.Add(wr.TimeStamp);
+                                weatherData.CurrentHourRecords.Add(wr);
+                            }
                         }
                     }
                 }
@@ -204,7 +217,7 @@ namespace SimpleWeatherStationBackgroundApp {
                 long tsHour = stopwatch.ElapsedMilliseconds;
 
                 stopwatch.Restart();
-                int dayRecords = await WriteDataListToIsolatedStorageAsync(weatherData.CurrentDayRecords, "CurrentDayRecords.json");
+                int dayRecords = await WriteDataListToIsolatedStorageAsync(weatherData.Last24HourRecords, "Last24HourRecords.json");
                 long tsDay = stopwatch.ElapsedMilliseconds;
 
                 stopwatch.Restart();

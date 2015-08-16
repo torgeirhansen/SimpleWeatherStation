@@ -42,7 +42,7 @@ namespace SimpleWeatherStationBackgroundApp
         /// <summary>
         /// This holds a list of averaged hours, to represent the last 24hours worth of data.
         /// </summary>
-        internal List<WeatherRecord> CurrentDayRecords { get; } = new List<WeatherRecord>();
+        internal List<WeatherRecord> Last24HourRecords { get; } = new List<WeatherRecord>();
 
         /// <summary>
         /// This holds a list of averaged days, to represent the last month worth of data.
@@ -75,9 +75,9 @@ namespace SimpleWeatherStationBackgroundApp
         {
             get
             {
-                lock (CurrentDayRecords)
+                lock (Last24HourRecords)
                 {
-                    return JsonConvert.SerializeObject(CurrentDayRecords);
+                    return JsonConvert.SerializeObject(Last24HourRecords);
                 }
             }
         }
@@ -143,10 +143,10 @@ namespace SimpleWeatherStationBackgroundApp
             }
 
             // Add to our list of last 24hours, and remove any entries that are too old.
-            lock (CurrentDayRecords)
+            lock (Last24HourRecords)
             {
-                CurrentDayRecords.Add(lastHour);
-                CurrentDayRecords.RemoveAll(wr => wr.TimeStamp < lastHour.TimeStamp.AddDays(-1));
+                Last24HourRecords.Add(lastHour);
+                Last24HourRecords.RemoveAll(wr => wr.TimeStamp < lastHour.TimeStamp.AddDays(-1));
             }
 
             // If we're not on a new day, do not continue (as we will add a days average to the 30days list).
@@ -156,14 +156,14 @@ namespace SimpleWeatherStationBackgroundApp
             }
             WeatherRecord lastDay = new WeatherRecord();
             lastDay.TimeStamp = new DateTime(currentHour.Year, currentHour.Month, currentHour.Day, 0, 0, 0);
-            lock (CurrentDayRecords)
+            lock (Last24HourRecords)
             {
-                lastDay.Altitude = CurrentDayRecords.Average(wr => wr.Altitude);
-                lastDay.AmbientLight = CurrentDayRecords.Average(wr => wr.AmbientLight);
-                lastDay.BarometricPressure = CurrentDayRecords.Average(wr => wr.BarometricPressure);
-                lastDay.CelsiusTemperature = CurrentDayRecords.Average(wr => wr.CelsiusTemperature);
-                lastDay.Humidity = CurrentDayRecords.Average(wr => wr.Humidity);
-                CurrentDayRecords.Clear();
+                var currentDayRecords = Last24HourRecords.Where(wr => wr.TimeStamp.Day == currentHour.Day).ToList();
+                lastDay.Altitude = currentDayRecords.Average(wr => wr.Altitude);
+                lastDay.AmbientLight = currentDayRecords.Average(wr => wr.AmbientLight);
+                lastDay.BarometricPressure = currentDayRecords.Average(wr => wr.BarometricPressure);
+                lastDay.CelsiusTemperature = currentDayRecords.Average(wr => wr.CelsiusTemperature);
+                lastDay.Humidity = currentDayRecords.Average(wr => wr.Humidity);
             }
 
             // Add to our list of last 30 days, and remove any entries that are too old.

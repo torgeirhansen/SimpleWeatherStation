@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Background="Black" Tapped="OnClick">
+    <Grid Background="Black" PointerPressed="OnClick">
         <TextBlock x:Name="LastUpdate" Text="Last update info" Foreground="White"/>
         <Viewbox Stretch="Uniform">
             <TextBlock x:Name="Degrees" Text="XX.YY C" Foreground="White"/>
