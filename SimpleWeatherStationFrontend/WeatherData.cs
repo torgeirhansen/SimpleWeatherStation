@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+// TODO: shared class would be nicer
 namespace SimpleWeatherStationFrontend {
+
     public sealed class WeatherData {
         private WeatherRecord currentRecord;
 

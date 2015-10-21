@@ -276,8 +276,20 @@ namespace SimpleWeatherStationBackgroundApp {
         }
 
         private void OnCanceled(IBackgroundTaskInstance sender, BackgroundTaskCancellationReason reason) {
+
             // Relinquish our task deferral
             taskDeferral.Complete();
+
+            Task t = new Task(async () => {
+                StorageFolder localFolder = ApplicationData.Current.LocalFolder;
+                StorageFile exceptionFile = await localFolder.CreateFileAsync("TemperatureLog.Log", CreationCollisionOption.OpenIfExists);
+
+                List<string> outData = new List<string>();
+                outData.Add(string.Empty);
+                outData.Add("OnCanceled(sender: " + sender + ", reason: " + reason);
+                await FileIO.AppendLinesAsync(exceptionFile, outData);
+            });
+            t.Wait();
         }
 
         /// <summary>

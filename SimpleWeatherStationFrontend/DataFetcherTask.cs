@@ -27,6 +27,7 @@ namespace SimpleWeatherStationFrontend
         private ThreadPoolTimer lastdayUpdateTimer { get; set; }
 
         public WeatherData WeatherData { get; } = new WeatherData();
+        public TemperatureData TemperatureData  { get; } = new TemperatureData();
 
         public async Task StartAsync()
         {
@@ -119,8 +120,29 @@ namespace SimpleWeatherStationFrontend
             {
                 await LogExceptionAsync(nameof(FetchDataFromDeviceAsync), ex);
                 // update screen, show error..
-                this.WeatherData.SetCurrent(new WeatherRecord() {TimeStamp = DateTime.Now, ErrorMessage = ex.Message});
+                this.WeatherData.SetCurrent(new WeatherRecord() { TimeStamp = DateTime.Now, ErrorMessage = ex.Message });
             }
+
+            try
+            {
+                // Fetch data from weather-device.
+                string weatherUrl = "http://weather:50001";
+                WebRequest req = WebRequest.Create(weatherUrl);
+                WebResponse res = await req.GetResponseAsync();
+
+                StreamReader sr = new StreamReader(res.GetResponseStream());
+                string temperatureData = await sr.ReadToEndAsync();
+
+                this.TemperatureData.SetCurrent(JsonConvert.DeserializeObject<TemperatureRecord>(temperatureData));
+            }
+            catch (Exception ex)
+            {
+                await LogExceptionAsync(nameof(FetchDataFromDeviceAsync), ex);
+                // update screen, show error..
+                this.TemperatureData.SetCurrent(new TemperatureRecord() { TimeStamp = DateTime.Now, ErrorMessage = ex.Message });
+            }
+
+
         }
 
         /// <summary>

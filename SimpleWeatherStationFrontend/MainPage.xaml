@@ -7,10 +7,52 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Background="Black" PointerPressed="OnClick">
-        <TextBlock x:Name="LastUpdate" Text="Last update info" Foreground="White"/>
-        <Viewbox Stretch="Uniform">
-            <TextBlock x:Name="Degrees" Text="XX.YY C" Foreground="White"/>
-        </Viewbox>
+    <Grid Background="Black" PointerPressed="OnClick" Margin="0,0,0,0" d:LayoutOverrides="Height">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="5*"/>
+            <RowDefinition Height="4*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" x:Name="LastUpdate" Text="Last update info" Foreground="White"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="5*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Inne" Foreground="White"/>
+            <Viewbox Grid.Column="0" Stretch="Uniform">
+                <TextBlock x:Name="DegreesIndoor" Text="XX.X C" Foreground="White"/>
+            </Viewbox>
+
+            <TextBlock Grid.Column="2" Text="Ute" Foreground="White"/>
+            <Viewbox Grid.Column="2" Stretch="Uniform">
+                <TextBlock x:Name="DegreesOutdoor" Text="YY.Y C" Foreground="White"/>
+            </Viewbox>
+        </Grid>
+        
+        <!-- Lar denne være collapsed frem til jeg får ordnet værmeldingen inn her -->
+        <Grid Grid.Row="2" Height="100" VerticalAlignment="Center" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="5*"/>
+            </Grid.ColumnDefinitions>
+
+            <Viewbox Grid.Column="0" Stretch="Uniform"  VerticalAlignment="Center">
+                <TextBlock x:Name="forecast1" Text="ZZ.Z C" Foreground="White"/>
+            </Viewbox>
+            <Image Grid.Column="1" x:Name="image1" Source="Assets/WeatherIcons/cloudsnow.png" Stretch="Uniform" Height="77" Width="80"/>
+
+            <Viewbox Grid.Column="3" Stretch="Uniform"  VerticalAlignment="Center">
+                <TextBlock x:Name="forecast2" Text="ZZ.Z C" Foreground="White"/>
+            </Viewbox>
+            <Image Grid.Column="4" x:Name="image2" Source="Assets/WeatherIcons/sun.png" Stretch="Fill" Height="77" Width="80"/>
+        </Grid>
     </Grid>
 </Page>

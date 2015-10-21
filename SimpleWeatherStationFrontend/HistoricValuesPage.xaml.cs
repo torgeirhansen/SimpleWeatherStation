@@ -27,6 +27,7 @@ namespace SimpleWeatherStationFrontend
     {
 
         private WeatherData weatherData { get; set; }
+        private TemperatureData temperatureData { get; set; }
 
         public PlotModel PlotModel { get; } = new PlotModel();
 
@@ -205,7 +206,10 @@ namespace SimpleWeatherStationFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            weatherData = e.Parameter as WeatherData;
+            Tuple<WeatherData, TemperatureData> param = (Tuple<WeatherData, TemperatureData>)e.Parameter;
+            weatherData = param.Item1;
+            temperatureData = param.Item2;
+
             RepopulatePlotModel();
 
             // Create a timer that takes us back to the main page in 10 seconds.
@@ -247,7 +251,9 @@ namespace SimpleWeatherStationFrontend
         /// </summary>
         private void GotoMainPage()
         {
-            this.Frame.Navigate(typeof (MainPage), weatherData);
+            Tuple<WeatherData, TemperatureData> param = new Tuple<WeatherData, TemperatureData>(weatherData, temperatureData);
+
+            this.Frame.Navigate(typeof (MainPage), param);
         }
     }
 }

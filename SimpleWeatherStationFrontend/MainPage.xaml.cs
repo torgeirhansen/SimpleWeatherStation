@@ -23,6 +23,14 @@ using Windows.Devices.Sensors;
 using Windows.Storage;
 using Windows.UI.ViewManagement;
 
+
+//#1: Fiks grafikken til separate filer og dra inn som assets
+//#2: Finn pent/yr/geowhatever xml'en og sjekk formatet.
+//#3: Tenk litt på hvordan det skal se ut (to ikoner som er nå+12?)
+//#4: Lag timer oppdatering av skjerm, som da henter xml og viser korrekt bilde.
+//#5: Fikse så nodenavn blir appconfig param (appsetting..)
+
+
 namespace SimpleWeatherStationFrontend
 {
 
@@ -35,6 +43,8 @@ namespace SimpleWeatherStationFrontend
 
         private WeatherData weatherData { get; set; }
 
+        private TemperatureData temperatureData { get; set; }
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -42,7 +52,9 @@ namespace SimpleWeatherStationFrontend
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            weatherData = e.Parameter as WeatherData;
+            Tuple<WeatherData, TemperatureData> param = (Tuple<WeatherData, TemperatureData>) e.Parameter;
+            weatherData = param.Item1;
+            temperatureData = param.Item2;
             Init();
 
             // Update UI every 2 seconds while screen is active.
@@ -75,20 +87,34 @@ namespace SimpleWeatherStationFrontend
             if (weatherRecord == null)
             {
                 LastUpdate.Text = "Please wait for initial values..";
-                Degrees.Text = string.Empty;
-                return;
-            }
-
-            LastUpdate.Text = "Last update: " + DateTime.Now;
-
-            if (!string.IsNullOrEmpty(weatherRecord.ErrorMessage))
-            {
-                Degrees.Text = "Error: " + weatherRecord.ErrorMessage;
+                DegreesOutdoor.Text = string.Empty;
             }
             else
             {
-                Degrees.Text = string.Format("{0:N2}C", weatherRecord.CelsiusTemperature);
+                DegreesOutdoor.Text = string.Format("{0:N1}C", weatherRecord.CelsiusTemperature);
+                LastUpdate.Text = "Last update: " + DateTime.Now;
             }
+
+            DegreesIndoor.Text = string.Empty;
+            TemperatureRecord temperatureRecord = temperatureData.Current;
+            if (temperatureRecord == null)
+            {
+                DegreesIndoor.Text = string.Empty;
+            }
+            else
+            {
+                DegreesIndoor.Text = string.Format("{0:N1}C", temperatureRecord.CelsiusTemperature);
+            }
+
+            // Testing w/o the annoying replacement of temp with temporary error..
+            //if (!string.IsNullOrEmpty(weatherRecord.ErrorMessage))
+            //{
+            //    DegreesOutdoor.Text = "Error: " + weatherRecord.ErrorMessage;
+            //}
+            //else
+            //{
+            //    DegreesOutdoor.Text = string.Format("{0:N1}C", weatherRecord.CelsiusTemperature);
+            //}
         }
 
         /// <summary>
@@ -98,7 +124,9 @@ namespace SimpleWeatherStationFrontend
         /// <param name="e"></param>
         private void OnClick(object sender, object e)
         {
-            this.Frame.Navigate(typeof (HistoricValuesPage), weatherData);
+            Tuple<WeatherData, TemperatureData> param = new Tuple<WeatherData, TemperatureData>(weatherData, temperatureData);
+
+            this.Frame.Navigate(typeof (HistoricValuesPage), param);
         }
     }
 }
