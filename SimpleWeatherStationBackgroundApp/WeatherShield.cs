@@ -4,7 +4,7 @@ using Windows.Devices.Enumeration;
 using Windows.Devices.Gpio;
 using Windows.Devices.I2c;
 
-namespace SimpleWeatherStationBackgroundApp {
+namespace Weatherstation.WeatherShieldReader {
     namespace Sparkfun
     {
         public sealed class WeatherShield

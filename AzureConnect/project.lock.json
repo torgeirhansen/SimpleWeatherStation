@@ -279,7 +279,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -1996,7 +1996,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -3746,7 +3746,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -5501,7 +5501,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -7251,7 +7251,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -9006,7 +9006,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -10756,7 +10756,7 @@
           "lib/dotnet/Microsoft.Win32.Primitives.dll": {}
         }
       },
-      "Newtonsoft.Json/7.0.1": {
+      "Newtonsoft.Json/8.0.1-beta3": {
         "compile": {
           "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll": {}
         },
@@ -12949,8 +12949,8 @@
         "ref/xamarinmac20/_._"
       ]
     },
-    "Newtonsoft.Json/7.0.1": {
-      "sha512": "q3V4KLetMLnt1gpAVWgtXnHjKs0UG/RalBc29u2ZKxd5t5Ze4JBL5WiiYIklJyK/5CRiIiNwigVQUo0FgbsuWA==",
+    "Newtonsoft.Json/8.0.1-beta3": {
+      "sha512": "fTozGxIUbseQrW3qXJcM5mDj/uenSJYu3WfwTsgc0alG8FqXwG5TY9aQLag+9Gt2bFtt/Y2e0Yy8J4p1fGtc9Q==",
       "type": "Package",
       "files": [
         "[Content_Types].xml",
@@ -12968,7 +12968,7 @@
         "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.dll",
         "lib/portable-net45+wp80+win8+wpa81+dnxcore50/Newtonsoft.Json.xml",
         "Newtonsoft.Json.nuspec",
-        "package/services/metadata/core-properties/49e907fc018c4c7ab632e6d4ad4766f8.psmdcp",
+        "package/services/metadata/core-properties/0f33e9ae0a294415849bc6d6b22dcb34.psmdcp",
         "tools/install.ps1"
       ]
     },
@@ -15752,7 +15752,8 @@
   "projectFileDependencyGroups": {
     "": [
       "Microsoft.NETCore.UniversalWindowsPlatform >= 5.0.0",
-      "Newtonsoft.Json >= 7.0.1"
+      "Newtonsoft.Json >= 8.0.1-beta3",
+      "WindowsAzure.Storage >= 6.1.1-preview"
     ],
     "UAP,Version=v10.0": []
   }

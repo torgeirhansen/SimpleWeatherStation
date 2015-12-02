@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Background;
 using Windows.Devices.Enumeration;
@@ -17,7 +12,7 @@ using Windows.System.Threading;
 
 //#error se her for info http://www.analog.com/media/en/technical-documentation/data-sheets/TMP35_36_37.pdf
 
-namespace TemperatureSensorReader {
+namespace Weatherstation.TemperatureReader {
     public sealed class StartupTask: IBackgroundTask {
         private BackgroundTaskDeferral taskDeferral;
         private ThreadPoolTimer i2cTimer;

@@ -9,7 +9,7 @@ using Windows.Networking.Sockets;
 using Windows.Storage;
 using Windows.Storage.Streams;
 
-namespace TemperatureSensorReader
+namespace Weatherstation.TemperatureReader
 {
 
     public sealed class HttpServer : IDisposable

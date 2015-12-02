@@ -10,42 +10,36 @@ using Windows.Devices.Gpio;
 using Windows.Storage;
 using Windows.System.Threading;
 using Newtonsoft.Json;
-using SimpleWeatherStationBackgroundApp.Sparkfun;
+using Weatherstation.AzureConnection;
+using Weatherstation.WeatherShieldReader.Sparkfun;
 
-namespace SimpleWeatherStationBackgroundApp {
+namespace Weatherstation.WeatherShieldReader {
     public sealed class StartupTask: IBackgroundTask {
         private BackgroundTaskDeferral taskDeferral;
-        private ThreadPoolTimer i2cTimer;
-        private HttpServer server;
-        private readonly int port = 50001;
-        private readonly WeatherData weatherData = new WeatherData();
-        private readonly int i2cReadIntervalSeconds = 2;
         private readonly WeatherShield shield = new WeatherShield();
-        private Mutex mutex;
-        private readonly string mutexId = "WeatherStation";
+        private AzureConnector azureConnector = null;
+
+        // How often to pull data from the weather shield
+        private readonly int weatherShieldReadInterval = 2;
 
         public async void Run(IBackgroundTaskInstance taskInstance) {
             try {
                 // Ensure our background task remains running
                 taskDeferral = taskInstance.GetDeferral();
 
-                // Read any weather data that might have been persisted to disk in a previous run.
-                await ReadPersistedWeatherDataAsync();
-
-                // Mutex will be used to ensure only one thread at a time is talking to the shield / isolated storage
-                mutex = new Mutex(false, mutexId);
+                // Initialize cloud connection
+                azureConnector = new AzureConnector();
+                await azureConnector.InitAsync();
 
                 // Initialize WeatherShield
                 await shield.BeginAsync();
 
                 // Create a timer-initiated ThreadPool task to read data from I2C
-                i2cTimer = ThreadPoolTimer.CreatePeriodicTimer(PopulateWeatherData, TimeSpan.FromSeconds(i2cReadIntervalSeconds));
+                ThreadPoolTimer.CreatePeriodicTimer(async (source) => {
+                    await readAndSendWeatherRecord();
+                }, TimeSpan.FromSeconds(weatherShieldReadInterval));
 
-                // Start the server
-                server = new HttpServer(port);
-                var asyncAction = ThreadPool.RunAsync(w => { server.StartServerAsync(weatherData); });
-
-                // Task cancellation handler, release our deferral there 
+                // Task cancellation handler, release our deferral there
                 taskInstance.Canceled += OnCanceled;
             } catch(Exception ex) {
                 await LogExceptionAsync(nameof(Run), ex);
@@ -59,220 +53,37 @@ namespace SimpleWeatherStationBackgroundApp {
         }
 
         /// <summary>
-        /// Reads the json files if existing, and populates the WeatherData with that data.
+        /// Reads current values from the weather shield and pushes them to Azure storage.
         /// </summary>
-        private async Task ReadPersistedWeatherDataAsync() {
-            try
-            {
-                List<WeatherRecord> data = await GetFileDataOrEmptyListAsync("CurrentMonthRecords.Json");
-                if (data != null && data.Any())
-                {
-                    lock (weatherData.CurrentMonthRecords)
-                    {
-                        weatherData.CurrentMonthRecords.Clear();
+        /// <param name="timer"></param>
+        private async Task readAndSendWeatherRecord() {
 
-                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                        List<DateTime> foundDates = new List<DateTime>();
-                        foreach (WeatherRecord wr in data)
-                        {
-                            if (!foundDates.Contains(wr.TimeStamp))
-                            {
-                                foundDates.Add(wr.TimeStamp);
-                                weatherData.CurrentMonthRecords.Add(wr);
-                            }
-                        }
-                    }
-                }
-
-                data = await GetFileDataOrEmptyListAsync("Last24HourRecords.Json");
-                if (data != null && data.Any())
-                {
-                    lock (weatherData.Last24HourRecords)
-                    {
-                        weatherData.Last24HourRecords.Clear();
-
-                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                        List<DateTime> foundDates = new List<DateTime>();
-                        foreach (WeatherRecord wr in data)
-                        {
-                            if (!foundDates.Contains(wr.TimeStamp))
-                            {
-                                foundDates.Add(wr.TimeStamp);
-                                weatherData.Last24HourRecords.Add(wr);
-                            }
-                        }
-                    }
-                }
-
-                data = await GetFileDataOrEmptyListAsync("CurrentHourRecords.Json");
-                if (data != null && data.Any())
-                {
-                    lock (weatherData.CurrentHourRecords)
-                    {
-                        weatherData.CurrentHourRecords.Clear();
-
-                        // If app crashed or stopped we might get duplicates here. Ensure we don't.
-                        List<DateTime> foundDates = new List<DateTime>();
-                        foreach (WeatherRecord wr in data)
-                        {
-                            if (!foundDates.Contains(wr.TimeStamp))
-                            {
-                                foundDates.Add(wr.TimeStamp);
-                                weatherData.CurrentHourRecords.Add(wr);
-                            }
-                        }
-                    }
-                }
-            } catch(Exception ex) {
-                await LogExceptionAsync(nameof(ReadPersistedWeatherDataAsync), ex);
-                if(Debugger.IsAttached) {
-                    Debugger.Break();
-                }
-            }
-        }
-
-        private async Task<List<WeatherRecord>> GetFileDataOrEmptyListAsync(string filename) {
-            try {
-                StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-
-                if(await localFolder.TryGetItemAsync(filename) != null) {
-                    StorageFile monthFile = await localFolder.GetFileAsync(filename);
-                    if(monthFile.IsAvailable) {
-                        using(var stream = await monthFile.OpenStreamForReadAsync()) {
-                            StreamReader reader = new StreamReader(stream);
-                            return JsonConvert.DeserializeObject<List<WeatherRecord>>(reader.ReadToEnd());
-                        }
-                    }
-                }
-            } catch(Exception ex) {
-                await LogExceptionAsync(nameof(GetFileDataOrEmptyListAsync) + "(" + filename + ")", ex);
-                if(Debugger.IsAttached) {
-                    Debugger.Break();
-                }
-            }
-
-            // In case of none-existing file or exception:
-            return new List<WeatherRecord>();
-        }
-
-        private void PopulateWeatherData(ThreadPoolTimer timer) {
-            bool hasMutex = false;
+            WeatherRecord record = new WeatherRecord();
+            record.TimeStamp = DateTime.Now.ToLocalTime();
 
             try {
-                hasMutex = mutex.WaitOne(1000);
-                if(hasMutex) {
-                    WeatherRecord record = new WeatherRecord();
-                    record.TimeStamp = DateTime.Now.ToLocalTime();
+                // Green led indicates that we're currently reading from the weathershield.
+                shield.BlueLEDPin.Write(GpioPinValue.Low);
+                shield.GreenLEDPin.Write(GpioPinValue.High);
+                record.Altitude = shield.Altitude;
+                record.BarometricPressure = shield.Pressure;
+                record.CelsiusTemperature = shield.Temperature;
+                record.Humidity = shield.Humidity;
+                record.AmbientLight = shield.AmbientLight;
+                shield.GreenLEDPin.Write(GpioPinValue.Low);
 
-                    // TOHA: når ferdig med å teste på soverom må dette aktiveres igjen..
-                    ////shield.BlueLEDPin.Write(GpioPinValue.High);
-                    shield.GreenLEDPin.Write(GpioPinValue.High);
-
-                    record.Altitude = shield.Altitude;
-                    record.BarometricPressure = shield.Pressure;
-                    record.CelsiusTemperature = shield.Temperature;
-                    record.Humidity = shield.Humidity;
-                    record.AmbientLight = shield.AmbientLight;
-
-                    weatherData.AddRecord(record);
-
-                    // TOHA: når ferdig med å teste på soverom må dette aktiveres igjen..
-                    ////shield.BlueLEDPin.Write(GpioPinValue.Low);
-                    shield.GreenLEDPin.Write(GpioPinValue.Low);
-
-                    // Write the data locally so that the http server can serve it.
-                    WriteDataToIsolatedStorageAsync();
-                }
-            } finally {
-                if(hasMutex) {
-                    mutex.ReleaseMutex();
-                }
+                // Blue led indicates that we're currently pushing data to Azure.
+                shield.BlueLEDPin.Write(GpioPinValue.High);
+                await azureConnector.SendMessageAsync(record);
+                shield.BlueLEDPin.Write(GpioPinValue.Low);
             }
+            catch (Exception ex) {
+                // To give some feedback to user
+                shield.BlueLEDPin.Write(GpioPinValue.High);
+                shield.GreenLEDPin.Write(GpioPinValue.High);
 
-        }
-
-        private async void WriteDataToIsolatedStorageAsync() {
-            try {
-                Stopwatch stopwatch = new Stopwatch();
-                stopwatch.Start();
-
-                StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-                StorageFile transferFile = await localFolder.CreateFileAsync("DataFile.json", CreationCollisionOption.ReplaceExisting);
-
-                using(var stream = await transferFile.OpenStreamForWriteAsync()) {
-                    StreamWriter writer = new StreamWriter(stream);
-                    string jsonData;
-                    lock (weatherData.Current) {
-                        jsonData = JsonConvert.SerializeObject(weatherData.Current);
-                    }
-                    await writer.WriteAsync(jsonData);
-
-                    writer.Flush();
-                }
-
-                long tsCurrent = stopwatch.ElapsedMilliseconds;
-
-                stopwatch.Restart();
-                int hourRecords = await WriteDataListToIsolatedStorageAsync(weatherData.CurrentHourRecords, "CurrentHourRecords.json");
-                long tsHour = stopwatch.ElapsedMilliseconds;
-
-                stopwatch.Restart();
-                int dayRecords = await WriteDataListToIsolatedStorageAsync(weatherData.Last24HourRecords, "Last24HourRecords.json");
-                long tsDay = stopwatch.ElapsedMilliseconds;
-
-                stopwatch.Restart();
-                int monthRecords = await WriteDataListToIsolatedStorageAsync(weatherData.CurrentMonthRecords, "CurrentMonthRecords.json");
-                long tsMonth = stopwatch.ElapsedMilliseconds;
-
-                // IO Performance logging
-                StorageFile logFile = await localFolder.CreateFileAsync("WritePerformance.Log", CreationCollisionOption.OpenIfExists);
-                using(var stream = await logFile.OpenStreamForWriteAsync()) {
-                    StreamWriter writer = new StreamWriter(stream);
-                    await
-                        writer.WriteLineAsync(
-                            $"{DateTime.Now.ToLocalTime()} - Current: {tsCurrent}ms, Hour: {tsHour}ms (count: {hourRecords}), Day: {tsDay}ms (count: {dayRecords}), Month: {tsMonth}ms (count: {monthRecords})");
-
-                    writer.Flush();
-                }
-            } catch(Exception ex) {
-                await LogExceptionAsync(nameof(WriteDataToIsolatedStorageAsync), ex);
-                if(Debugger.IsAttached) {
-                    Debugger.Break();
-                }
+                await LogExceptionAsync(nameof(readAndSendWeatherRecord), ex);
             }
-        }
-
-        private async Task<int> WriteDataListToIsolatedStorageAsync(List<WeatherRecord> data, string filename) {
-            try {
-                // local copy of the data to avoid problems with concurrency.
-                List<WeatherRecord> myDataCopy = null;
-                lock (data) {
-                    myDataCopy = new List<WeatherRecord>(data);
-                }
-
-                // We have exlusive access to the mutex so can safely wipe the transfer file
-                StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-                StorageFile transferFile = await localFolder.CreateFileAsync(filename, CreationCollisionOption.ReplaceExisting);
-
-                using(var stream = await transferFile.OpenStreamForWriteAsync()) {
-                    StreamWriter writer = new StreamWriter(stream);
-                    string jsonData = JsonConvert.SerializeObject(myDataCopy);
-                    await writer.WriteAsync(jsonData);
-
-                    writer.Flush();
-                }
-
-                return myDataCopy.Count;
-
-            } catch(Exception ex) {
-                await LogExceptionAsync(nameof(WriteDataListToIsolatedStorageAsync), ex);
-                if(Debugger.IsAttached) {
-                    Debugger.Break();
-                }
-            }
-
-            // zero items if we fail..
-            return 0;
         }
 
         private void OnCanceled(IBackgroundTaskInstance sender, BackgroundTaskCancellationReason reason) {

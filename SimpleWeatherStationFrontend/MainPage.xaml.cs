@@ -1,28 +1,10 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices.WindowsRuntime;
+﻿using System;
 using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.System.Threading;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
-using System.Threading;
-using Windows.ApplicationModel.Store;
-using Windows.Devices.Sensors;
-using Windows.Storage;
-using Windows.UI.ViewManagement;
-
+using Weatherstation.AzureConnection;
 
 //#1: Fiks grafikken til separate filer og dra inn som assets
 //#2: Finn pent/yr/geowhatever xml'en og sjekk formatet.
@@ -31,46 +13,53 @@ using Windows.UI.ViewManagement;
 //#5: Fikse så nodenavn blir appconfig param (appsetting..)
 
 
-namespace SimpleWeatherStationFrontend
+namespace Weatherstation.Frontend
 {
 
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
-    public sealed partial class MainPage : Page
-    {
-        private ThreadPoolTimer updateTimer;
-
-        private WeatherData weatherData { get; set; }
-
-        private TemperatureData temperatureData { get; set; }
+    public sealed partial class MainPage : Page {
+        private AzureConnector azureConnector;
+        private WeatherRecord weatherRecord = null;
 
         public MainPage()
         {
             this.InitializeComponent();
+            Loaded += OnLoaded;
+        }
+
+        private async void OnLoaded(object sender, RoutedEventArgs routedEventArgs) {
+            azureConnector = new AzureConnector();
+            await azureConnector.InitAsync(true);
+            azureConnector.OnMessageReceived += AzureConnector_OnMessageReceived;
+        }
+
+        private void AzureConnector_OnMessageReceived(WeatherRecord weatherRecord) {
+            this.weatherRecord = weatherRecord;
+            Task updateScreen = Task.Run(async () => await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.High, UpdateScreen));
+            updateScreen.Wait();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            Tuple<WeatherData, TemperatureData> param = (Tuple<WeatherData, TemperatureData>) e.Parameter;
-            weatherData = param.Item1;
-            temperatureData = param.Item2;
             Init();
 
-            // Update UI every 2 seconds while screen is active.
-            this.updateTimer = ThreadPoolTimer.CreatePeriodicTimer(async (source) =>
-            {
-                // Notify the UI to do an update.
-                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.High, UpdateScreen);
+            //// Update UI every 2 seconds while screen is active.
+            //this.updateTimer = ThreadPoolTimer.CreatePeriodicTimer(async (source) =>
+            //{
+            //    // Notify the UI to do an update.
+            //    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.High, UpdateScreen);
 
-            }, TimeSpan.FromSeconds(2));
+            //}, TimeSpan.FromSeconds(2));
 
             base.OnNavigatedTo(e);
         }
 
         protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
         {
-            this.updateTimer?.Cancel();
+            azureConnector.OnMessageReceived -= AzureConnector_OnMessageReceived;
+            //this.updateTimer?.Cancel();
 
             base.OnNavigatingFrom(e);
         }
@@ -83,7 +72,6 @@ namespace SimpleWeatherStationFrontend
 
         private void UpdateScreen()
         {
-            WeatherRecord weatherRecord = weatherData.Current;
             if (weatherRecord == null)
             {
                 LastUpdate.Text = "Please wait for initial values..";
@@ -92,19 +80,19 @@ namespace SimpleWeatherStationFrontend
             else
             {
                 DegreesOutdoor.Text = string.Format("{0:N1}C", weatherRecord.CelsiusTemperature);
-                LastUpdate.Text = "Last update: " + DateTime.Now;
+                LastUpdate.Text = "Last update: " + weatherRecord.TimeStamp;
             }
 
-            DegreesIndoor.Text = string.Empty;
-            TemperatureRecord temperatureRecord = temperatureData.Current;
-            if (temperatureRecord == null)
-            {
-                DegreesIndoor.Text = string.Empty;
-            }
-            else
-            {
-                DegreesIndoor.Text = string.Format("{0:N1}C", temperatureRecord.CelsiusTemperature);
-            }
+            //DegreesIndoor.Text = string.Empty;
+            //TemperatureRecord temperatureRecord = temperatureData.Current;
+            //if (temperatureRecord == null)
+            //{
+            //    DegreesIndoor.Text = string.Empty;
+            //}
+            //else
+            //{
+            //    DegreesIndoor.Text = string.Format("{0:N1}C", temperatureRecord.CelsiusTemperature);
+            //}
 
             // Testing w/o the annoying replacement of temp with temporary error..
             //if (!string.IsNullOrEmpty(weatherRecord.ErrorMessage))
@@ -115,18 +103,6 @@ namespace SimpleWeatherStationFrontend
             //{
             //    DegreesOutdoor.Text = string.Format("{0:N1}C", weatherRecord.CelsiusTemperature);
             //}
-        }
-
-        /// <summary>
-        /// When clicked, show historic values
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnClick(object sender, object e)
-        {
-            Tuple<WeatherData, TemperatureData> param = new Tuple<WeatherData, TemperatureData>(weatherData, temperatureData);
-
-            this.Frame.Navigate(typeof (HistoricValuesPage), param);
         }
     }
 }

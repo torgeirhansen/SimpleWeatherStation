@@ -1,45 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.ApplicationModel.Background;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 // The Blank Application template is documented at http://go.microsoft.com/fwlink/?LinkId=402347&clcid=0x409
 
-namespace SimpleWeatherStationFrontend {
+namespace Weatherstation.Frontend {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
     sealed partial class App: Application {
-        /// <summary>
-        /// Allows tracking page views, exceptions and other telemetry through the Microsoft Application Insights service.
-        /// </summary>
-        public static Microsoft.ApplicationInsights.TelemetryClient TelemetryClient;
-
-        /// <summary>
-        /// The background process that fetches data continously.
-        /// </summary>
-        internal DataFetcherTask dataFetcher { get; } = new DataFetcherTask();
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
         public App() {
-            TelemetryClient = new Microsoft.ApplicationInsights.TelemetryClient();
-
             this.InitializeComponent();
             this.Suspending += OnSuspending;
             this.Resuming += OnResuming;
@@ -57,9 +35,6 @@ namespace SimpleWeatherStationFrontend {
                 this.DebugSettings.EnableFrameRateCounter = true;
             }
 #endif
-
-            await dataFetcher.StartAsync();
-
             Frame rootFrame = Window.Current.Content as Frame;
 
             // Do not repeat app initialization when the Window already has content,
@@ -82,8 +57,7 @@ namespace SimpleWeatherStationFrontend {
                 // When the navigation stack isn't restored navigate to the first page,
                 // configuring the new page by passing required information as a navigation
                 // parameter
-                Tuple<WeatherData, TemperatureData> param = new Tuple<WeatherData, TemperatureData>(dataFetcher.WeatherData, dataFetcher.TemperatureData);
-                rootFrame.Navigate(typeof(MainPage), param);
+                rootFrame.Navigate(typeof(MainPage));
             }
             // Ensure the current window is active
             Window.Current.Activate();
@@ -106,7 +80,6 @@ namespace SimpleWeatherStationFrontend {
         /// <param name="sender">The source of the suspend request.</param>
         /// <param name="e">Details about the suspend request.</param>
         private void OnSuspending(object sender, SuspendingEventArgs e) {
-            dataFetcher.Stop();
 
             var deferral = e.SuspendingOperation.GetDeferral();
             deferral.Complete();
@@ -119,7 +92,6 @@ namespace SimpleWeatherStationFrontend {
         /// <param name="e"></param>
         private async void OnResuming(object sender, object e)
         {
-            await dataFetcher.StartAsync();
         }
     }
 }
